@@ -1,0 +1,55 @@
+name: Build ChatGPT skill packs
+
+on:
+  workflow_dispatch:
+  pull_request:
+    paths:
+      - 'tools/build_chatgpt_skill_pack.py'
+      - '.github/workflows/chatgpt-skill-pack.yml'
+  push:
+    branches: [main]
+    paths:
+      - 'tools/build_chatgpt_skill_pack.py'
+      - '.github/workflows/chatgpt-skill-pack.yml'
+
+permissions:
+  contents: read
+
+jobs:
+  package:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - name: Checkout UI UX repo
+        uses: actions/checkout@v4
+        with:
+          path: uiux
+          persist-credentials: false
+      - name: Checkout ECC (public source)
+        run: git clone --depth 1 https://github.com/drcbmw/ECC.git external/ECC
+      - name: Checkout Logo Design (public source)
+        run: git clone --depth 1 https://github.com/drcbmw/logo-design-skill.git external/logo-design-skill
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+      - name: Install YAML parser
+        run: python -m pip install PyYAML==6.0.2
+      - name: Generate and validate all archives
+        run: |
+          python uiux/tools/build_chatgpt_skill_pack.py \
+            --uiux uiux \
+            --ecc external/ECC \
+            --logo external/logo-design-skill \
+            --out dist/chatgpt
+      - name: Upload downloadable ZIPs
+        uses: actions/upload-artifact@v4
+        with:
+          name: darac-chatgpt-skills-ready
+          path: |
+            dist/chatgpt/chatgpt-skills-pack.zip
+            dist/chatgpt/skill.zip
+            dist/chatgpt/INSTALACIJA-PRVO-PROCITAJ.md
+            dist/chatgpt/manifest.json
+          retention-days: 30
+          if-no-files-found: error
